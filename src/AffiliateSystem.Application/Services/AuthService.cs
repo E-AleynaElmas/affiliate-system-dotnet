@@ -19,6 +19,7 @@ public class AuthService : IAuthService
     private readonly IRepository<ReferralLink> _referralLinkRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtService _jwtService;
     private readonly IMapper _mapper;
 
     public AuthService(
@@ -28,6 +29,7 @@ public class AuthService : IAuthService
         IRepository<ReferralLink> referralLinkRepository,
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
+        IJwtService jwtService,
         IMapper mapper)
     {
         _userRepository = userRepository;
@@ -36,6 +38,7 @@ public class AuthService : IAuthService
         _referralLinkRepository = referralLinkRepository;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
+        _jwtService = jwtService;
         _mapper = mapper;
     }
 
@@ -107,10 +110,10 @@ public class AuthService : IAuthService
 
         await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", true, request.UserAgent);
 
-        // Create response (JWT token will be implemented later)
+        // Create response with JWT token
         var response = new LoginResponse
         {
-            Token = "temporary-token", // Will be replaced with JWT
+            Token = _jwtService.GenerateToken(user),
             ExpiresAt = DateTime.UtcNow.AddHours(24),
             User = _mapper.Map<UserInfo>(user)
         };
@@ -165,10 +168,10 @@ public class AuthService : IAuthService
         await _userRepository.AddAsync(user);
         await _unitOfWork.CompleteAsync();
 
-        // Auto-login after registration
+        // Auto-login after registration with JWT token
         var response = new LoginResponse
         {
-            Token = "temporary-token", // Will be replaced with JWT
+            Token = _jwtService.GenerateToken(user),
             ExpiresAt = DateTime.UtcNow.AddHours(24),
             User = _mapper.Map<UserInfo>(user)
         };

@@ -2,8 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using AspNetCoreRateLimit;
 using AffiliateSystem.Infrastructure.Data;
 using AffiliateSystem.Infrastructure.Repositories;
+using AffiliateSystem.Infrastructure.Services;
+using AffiliateSystem.Infrastructure.Middleware;
+using AffiliateSystem.Infrastructure.Filters;
+using AffiliateSystem.Infrastructure.Configuration;
 using AffiliateSystem.Application.Services;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Application.Mappings;
@@ -54,11 +59,24 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+// Register Infrastructure Services
+builder.Services.AddScoped<ICaptchaService, CaptchaService>();
+builder.Services.AddHttpClient();
+
+// Add Rate Limiting
+builder.Services.AddRateLimiting(builder.Configuration);
+
+// Add Memory Cache (required for rate limiting and CAPTCHA)
+builder.Services.AddMemoryCache();
+
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// Add Controllers
-builder.Services.AddControllers();
+// Add Controllers with XSS Protection
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<GlobalXssProtectionAttribute>();
+});
 
 // Configure CORS (Allow any origin during development)
 builder.Services.AddCors(options =>
@@ -122,6 +140,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add IP Rate Limiting middleware
+app.UseIpRateLimiting();
+
+// Add custom IP Blocking middleware
+app.UseMiddleware<IpBlockingMiddleware>();
 
 // Add authentication before authorization
 app.UseAuthentication();

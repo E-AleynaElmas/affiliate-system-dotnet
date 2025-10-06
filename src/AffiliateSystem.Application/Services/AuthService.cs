@@ -20,6 +20,7 @@ public class AuthService : IAuthService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtService _jwtService;
+    private readonly ICaptchaService _captchaService;
     private readonly IMapper _mapper;
 
     public AuthService(
@@ -30,6 +31,7 @@ public class AuthService : IAuthService
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
         IJwtService jwtService,
+        ICaptchaService captchaService,
         IMapper mapper)
     {
         _userRepository = userRepository;
@@ -39,6 +41,7 @@ public class AuthService : IAuthService
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _jwtService = jwtService;
+        _captchaService = captchaService;
         _mapper = mapper;
     }
 
@@ -47,6 +50,17 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<BaseResponse<LoginResponse>> LoginAsync(LoginRequest request)
     {
+        // Validate CAPTCHA
+        if (!string.IsNullOrEmpty(request.CaptchaToken))
+        {
+            var captchaValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaToken, request.IpAddress);
+            if (!captchaValid)
+            {
+                await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid CAPTCHA");
+                return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
+            }
+        }
+
         // Check if IP is blocked
         if (!string.IsNullOrEmpty(request.IpAddress) && await IsIpBlockedAsync(request.IpAddress))
         {
@@ -126,6 +140,16 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<BaseResponse<LoginResponse>> RegisterAsync(RegisterRequest request)
     {
+        // Validate CAPTCHA for registration
+        if (!string.IsNullOrEmpty(request.CaptchaToken))
+        {
+            var captchaValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaToken);
+            if (!captchaValid)
+            {
+                return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
+            }
+        }
+
         // Check if email already exists
         if (await _userRepository.AnyAsync(u => u.Email == request.Email))
         {

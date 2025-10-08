@@ -27,6 +27,8 @@ public class AuthServiceTests
     private readonly Mock<IJwtService> _jwtServiceMock;
     private readonly Mock<ICaptchaService> _captchaServiceMock;
     private readonly Mock<IMapper> _mapperMock;
+    private readonly Mock<IIpBlockingService> _ipBlockingServiceMock;
+    private readonly Mock<ILoginAttemptService> _loginAttemptServiceMock;
     private readonly AuthService _authService;
 
     public AuthServiceTests()
@@ -40,6 +42,8 @@ public class AuthServiceTests
         _jwtServiceMock = new Mock<IJwtService>();
         _captchaServiceMock = new Mock<ICaptchaService>();
         _mapperMock = new Mock<IMapper>();
+        _ipBlockingServiceMock = new Mock<IIpBlockingService>();
+        _loginAttemptServiceMock = new Mock<ILoginAttemptService>();
 
         _authService = new AuthService(
             _userRepositoryMock.Object,
@@ -50,7 +54,9 @@ public class AuthServiceTests
             _passwordHasherMock.Object,
             _jwtServiceMock.Object,
             _captchaServiceMock.Object,
-            _mapperMock.Object
+            _mapperMock.Object,
+            _ipBlockingServiceMock.Object,
+            _loginAttemptServiceMock.Object
         );
     }
 
@@ -66,10 +72,10 @@ public class AuthServiceTests
         _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync((BlockedIp?)null);
 
-        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(user);
 
         _passwordHasherMock.Setup(x => x.VerifyPassword(loginRequest.Password, user.PasswordHash, user.PasswordSalt))
@@ -91,7 +97,7 @@ public class AuthServiceTests
         result.Data!.Token.Should().Be("test-jwt-token");
         result.Message.Should().Be("Login successful");
 
-        _unitOfWorkMock.Verify(x => x.CompleteAsync(default), Times.AtLeastOnce());
+        _unitOfWorkMock.Verify(x => x.CompleteAsync(), Times.AtLeastOnce());
     }
 
     [Fact]
@@ -112,7 +118,7 @@ public class AuthServiceTests
         result.Message.Should().Be("Invalid CAPTCHA. Please try again.");
         result.Data.Should().BeNull();
 
-        _userRepositoryMock.Verify(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default), Times.Never);
+        _userRepositoryMock.Verify(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()), Times.Never);
     }
 
     [Fact]
@@ -125,7 +131,7 @@ public class AuthServiceTests
         _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync(blockedIp);
 
         // Act
@@ -137,7 +143,7 @@ public class AuthServiceTests
         result.Message.Should().Contain("blocked");
         result.Data.Should().BeNull();
 
-        _userRepositoryMock.Verify(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default), Times.Never);
+        _userRepositoryMock.Verify(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()), Times.Never);
     }
 
     [Fact]
@@ -149,10 +155,10 @@ public class AuthServiceTests
         _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync((BlockedIp?)null);
 
-        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync((User?)null);
 
         // Act
@@ -175,18 +181,16 @@ public class AuthServiceTests
         _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync((BlockedIp?)null);
 
-        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(user);
 
         _passwordHasherMock.Setup(x => x.VerifyPassword(loginRequest.Password, user.PasswordHash, user.PasswordSalt))
             .Returns(false);
 
-        _loginAttemptRepositoryMock.Setup(x => x.FindAsync(
-            It.IsAny<Expression<Func<LoginAttempt, bool>>>(),
-            null, null, null, default))
+        _loginAttemptRepositoryMock.Setup(x => x.FindAsync(It.IsAny<Expression<Func<LoginAttempt, bool>>>()))
             .ReturnsAsync(new List<LoginAttempt>());
 
         // Act
@@ -199,7 +203,7 @@ public class AuthServiceTests
         result.Data.Should().BeNull();
 
         _userRepositoryMock.Verify(x => x.Update(It.IsAny<User>()), Times.Once);
-        _unitOfWorkMock.Verify(x => x.CompleteAsync(default), Times.AtLeastOnce());
+        _unitOfWorkMock.Verify(x => x.CompleteAsync(), Times.AtLeastOnce());
     }
 
     [Fact]
@@ -213,10 +217,10 @@ public class AuthServiceTests
         _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync((BlockedIp?)null);
 
-        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(user);
 
         // Act
@@ -239,10 +243,10 @@ public class AuthServiceTests
         _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync((BlockedIp?)null);
 
-        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(user);
 
         _passwordHasherMock.Setup(x => x.VerifyPassword(loginRequest.Password, user.PasswordHash, user.PasswordSalt))
@@ -268,10 +272,10 @@ public class AuthServiceTests
         // Arrange
         var registerRequest = TestDataBuilder.CreateRegisterRequest();
 
-        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>()))
+        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _userRepositoryMock.Setup(x => x.AnyAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.AnyAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(false);
 
         _passwordHasherMock.Setup(x => x.HashPassword(registerRequest.Password))
@@ -293,8 +297,8 @@ public class AuthServiceTests
         result.Data!.Token.Should().Be("test-jwt-token");
         result.Message.Should().Be("Registration successful");
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Once);
-        _unitOfWorkMock.Verify(x => x.CompleteAsync(default), Times.Once);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>()), Times.Once);
+        _unitOfWorkMock.Verify(x => x.CompleteAsync(), Times.Once);
     }
 
     [Fact]
@@ -303,7 +307,7 @@ public class AuthServiceTests
         // Arrange
         var registerRequest = TestDataBuilder.CreateRegisterRequest();
 
-        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>()))
+        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(false);
 
         // Act
@@ -315,7 +319,7 @@ public class AuthServiceTests
         result.Message.Should().Be("Invalid CAPTCHA. Please try again.");
         result.Data.Should().BeNull();
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>()), Times.Never);
     }
 
     [Fact]
@@ -324,10 +328,10 @@ public class AuthServiceTests
         // Arrange
         var registerRequest = TestDataBuilder.CreateRegisterRequest();
 
-        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>()))
+        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _userRepositoryMock.Setup(x => x.AnyAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.AnyAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(true);
 
         // Act
@@ -339,7 +343,7 @@ public class AuthServiceTests
         result.Message.Should().Be("Email already registered");
         result.Data.Should().BeNull();
 
-        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), default), Times.Never);
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>()), Times.Never);
     }
 
     [Fact]
@@ -349,13 +353,13 @@ public class AuthServiceTests
         var registerRequest = TestDataBuilder.CreateRegisterRequest(referralCode: "REF12345");
         var referralLink = TestDataBuilder.CreateReferralLink(code: "REF12345");
 
-        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>()))
+        _captchaServiceMock.Setup(x => x.ValidateCaptchaAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        _userRepositoryMock.Setup(x => x.AnyAsync(It.IsAny<Expression<Func<User, bool>>>(), default))
+        _userRepositoryMock.Setup(x => x.AnyAsync(It.IsAny<Expression<Func<User, bool>>>()))
             .ReturnsAsync(false);
 
-        _referralLinkRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<ReferralLink, bool>>>(), default))
+        _referralLinkRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<ReferralLink, bool>>>()))
             .ReturnsAsync(referralLink);
 
         _passwordHasherMock.Setup(x => x.HashPassword(registerRequest.Password))
@@ -365,9 +369,9 @@ public class AuthServiceTests
             .Returns("test-jwt-token");
 
         User? capturedUser = null;
-        _userRepositoryMock.Setup(x => x.AddAsync(It.IsAny<User>(), default))
-            .Callback<User, CancellationToken>((user, _) => capturedUser = user)
-            .Returns(Task.CompletedTask);
+        _userRepositoryMock.Setup(x => x.AddAsync(It.IsAny<User>()))
+            .Callback<User>(user => capturedUser = user)
+            .ReturnsAsync((User u) => u);
 
         // Act
         var result = await _authService.RegisterAsync(registerRequest);
@@ -394,7 +398,7 @@ public class AuthServiceTests
         var referralCode = "REF12345";
         var referralLink = TestDataBuilder.CreateReferralLink(code: referralCode);
 
-        _referralLinkRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<ReferralLink, bool>>>(), default))
+        _referralLinkRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<ReferralLink, bool>>>()))
             .ReturnsAsync(referralLink);
 
         // Act
@@ -410,7 +414,7 @@ public class AuthServiceTests
         // Arrange
         var referralCode = "INVALID";
 
-        _referralLinkRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<ReferralLink, bool>>>(), default))
+        _referralLinkRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<ReferralLink, bool>>>()))
             .ReturnsAsync((ReferralLink?)null);
 
         // Act
@@ -427,7 +431,7 @@ public class AuthServiceTests
         var ipAddress = "192.168.1.100";
         var blockedIp = TestDataBuilder.CreateBlockedIp(ipAddress: ipAddress);
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync(blockedIp);
 
         // Act
@@ -443,7 +447,7 @@ public class AuthServiceTests
         // Arrange
         var ipAddress = "192.168.1.200";
 
-        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>(), default))
+        _blockedIpRepositoryMock.Setup(x => x.SingleOrDefaultAsync(It.IsAny<Expression<Func<BlockedIp, bool>>>()))
             .ReturnsAsync((BlockedIp?)null);
 
         // Act

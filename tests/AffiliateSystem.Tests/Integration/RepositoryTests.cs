@@ -125,15 +125,14 @@ public class RepositoryTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _userRepository.FindAsync(
-            predicate: null,
-            orderBy: q => q.OrderBy(u => u.Email));
+        var result = await _userRepository.FindAsync(u => true);
+        var orderedResult = result.OrderBy(u => u.Email);
 
         // Assert
-        result.Should().HaveCount(3);
-        result.ElementAt(0).Email.Should().Be("a@example.com");
-        result.ElementAt(1).Email.Should().Be("b@example.com");
-        result.ElementAt(2).Email.Should().Be("c@example.com");
+        orderedResult.Should().HaveCount(3);
+        orderedResult.ElementAt(0).Email.Should().Be("a@example.com");
+        orderedResult.ElementAt(1).Email.Should().Be("b@example.com");
+        orderedResult.ElementAt(2).Email.Should().Be("c@example.com");
     }
 
     [Fact]
@@ -147,10 +146,11 @@ public class RepositoryTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _userRepository.FindAsync(take: 5);
+        var result = await _userRepository.FindAsync(u => true);
+        var limitedResult = result.Take(5);
 
         // Assert
-        result.Should().HaveCount(5);
+        limitedResult.Should().HaveCount(5);
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class RepositoryTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var count = await _userRepository.CountAsync();
+        var count = await _userRepository.CountAsync(null);
 
         // Assert
         count.Should().Be(5);
@@ -289,14 +289,12 @@ public class RepositoryTests : IDisposable
         var user = TestDataBuilder.CreateUser();
 
         // Act
-        using (var transaction = await _unitOfWork.BeginTransactionAsync())
-        {
-            await _userRepository.AddAsync(user);
-            await _unitOfWork.CompleteAsync();
+        await _unitOfWork.BeginTransactionAsync();
+        await _userRepository.AddAsync(user);
+        await _unitOfWork.CompleteAsync();
 
-            // Rollback transaction
-            await _unitOfWork.RollbackAsync();
-        }
+        // Rollback transaction
+        await _unitOfWork.RollbackAsync();
 
         // Assert
         var notFound = await _userRepository.GetByIdAsync(user.Id);
@@ -310,14 +308,12 @@ public class RepositoryTests : IDisposable
         var user = TestDataBuilder.CreateUser();
 
         // Act
-        using (var transaction = await _unitOfWork.BeginTransactionAsync())
-        {
-            await _userRepository.AddAsync(user);
-            await _unitOfWork.CompleteAsync();
+        await _unitOfWork.BeginTransactionAsync();
+        await _userRepository.AddAsync(user);
+        await _unitOfWork.CompleteAsync();
 
-            // Commit transaction
-            await _unitOfWork.CommitAsync();
-        }
+        // Commit transaction
+        await _unitOfWork.CommitAsync();
 
         // Assert
         var found = await _userRepository.GetByIdAsync(user.Id);

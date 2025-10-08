@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Affiliate System API</title>
+    <link rel="stylesheet" type="text/css" href="./swagger-ui.css">
+    <style>
+        .role-selector-container {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .role-selector-container select {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .role-selector-container button {
+            padding: 8px 16px;
+            background: #4990e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .role-selector-container button:hover {
+            background: #357abd;
+        }
+        .role-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="role-selector-container">
+        <label for="roleSelect"><strong>Quick Login:</strong></label>
+        <select id="roleSelect">
+            <option value="">Select Role</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="customer">Customer</option>
+        </select>
+        <button onclick="quickLogin()">Auto Login & Authorize</button>
+        <div class="role-info" id="roleInfo"></div>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="./swagger-ui-bundle.js"></script>
+    <script src="./swagger-ui-standalone-preset.js"></script>
+    <script>
+        const roleCredentials = {
+            admin: { email: 'admin@affiliate.com', password: 'Admin@123' },
+            manager: { email: 'manager@affiliate.com', password: 'Manager@123' },
+            customer: { email: 'customer1@affiliate.com', password: 'Customer@123' }
+        };
+
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "./v1/swagger.json",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout"
+            });
+
+            window.ui = ui;
+        };
+
+        async function quickLogin() {
+            const role = document.getElementById('roleSelect').value;
+            const roleInfoEl = document.getElementById('roleInfo');
+
+            if (!role) {
+                roleInfoEl.innerHTML = '<span style="color: red;">Please select a role</span>';
+                return;
+            }
+
+            const credentials = roleCredentials[role];
+            roleInfoEl.innerHTML = '<span style="color: #666;">Logging in...</span>';
+
+            try {
+                // Get API base URL
+                const baseUrl = window.location.origin;
+
+                // Login request
+                const response = await fetch(`${baseUrl}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(credentials)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Login failed');
+                }
+
+                const data = await response.json();
+                const token = data.data.token;
+
+                // Authorize in Swagger UI
+                window.ui.preauthorizeApiKey('Bearer', `Bearer ${token}`);
+
+                roleInfoEl.innerHTML = `<span style="color: green;">✓ Logged in as ${role.toUpperCase()}</span>`;
+
+                // Show success message
+                setTimeout(() => {
+                    roleInfoEl.innerHTML = `<span style="color: #666;">Role: ${role} | Token: ${token.substring(0, 20)}...</span>`;
+                }, 2000);
+
+            } catch (error) {
+                roleInfoEl.innerHTML = `<span style="color: red;">Login failed: ${error.message}</span>`;
+                console.error('Login error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

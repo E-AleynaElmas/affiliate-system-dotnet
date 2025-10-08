@@ -18,6 +18,7 @@ using AffiliateSystem.Application.Validators;
 using AffiliateSystem.Domain.Interfaces;
 using System.Text;
 using AffiliateSystem.Application.Configuration;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,9 +27,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Configuration
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection(SecuritySettings.SectionName));
 
-// Add Entity Framework Core with SQL Server
+// Add Entity Framework Core with PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -118,11 +119,109 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    // All Endpoints - Full API
+    c.SwaggerDoc("all", new OpenApiInfo
     {
-        Title = "Affiliate System API",
+        Title = "All Endpoints",
         Version = "v1",
-        Description = "Secure affiliate management system with role-based access control"
+        Description = "Complete API documentation with all endpoints"
+    });
+
+    // Admin Role - Full access
+    c.SwaggerDoc("admin", new OpenApiInfo
+    {
+        Title = "Admin Role",
+        Version = "v1",
+        Description = "Admin: admin@affiliate.com / Admin@123"
+    });
+
+    // Manager Role
+    c.SwaggerDoc("manager", new OpenApiInfo
+    {
+        Title = "Manager Role",
+        Version = "v1",
+        Description = "Manager: manager@affiliate.com / Manager@123"
+    });
+
+    // Customer Role
+    c.SwaggerDoc("customer", new OpenApiInfo
+    {
+        Title = "Customer Role",
+        Version = "v1",
+        Description = "Customer: customer1@affiliate.com / Customer@123"
+    });
+
+    // Document filter to include/exclude endpoints based on role
+    c.DocInclusionPredicate((docName, apiDesc) =>
+    {
+        // Show all endpoints in "all" view
+        if (docName == "all")
+            return true;
+
+        try
+        {
+            var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
+
+            // Auth endpoints available to all roles
+            if (controllerName == "Auth")
+                return true;
+
+            // Get endpoint metadata
+            var endpoint = apiDesc.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor;
+            if (endpoint == null)
+                return false;
+
+            // Get authorize attributes from method
+            var methodAuthorize = endpoint.MethodInfo
+                .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+                .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+                .ToList();
+
+            // Get authorize attributes from controller
+            var controllerAuthorize = endpoint.ControllerTypeInfo
+                .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+                .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+                .ToList();
+
+            // Combine all authorize attributes
+            var allAuthorizeAttrs = methodAuthorize.Concat(controllerAuthorize).ToList();
+
+            // Get all required roles
+            var requiredRoles = allAuthorizeAttrs
+                .Where(a => !string.IsNullOrEmpty(a.Roles))
+                .SelectMany(a => a.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                .Select(r => r.Trim().ToLower())
+                .Distinct()
+                .ToList();
+
+            // If endpoint requires authentication but no specific role
+            if (!requiredRoles.Any() && allAuthorizeAttrs.Any())
+            {
+                // Show to all authenticated users
+                return true;
+            }
+
+            // If no authorization required, show to all
+            if (!allAuthorizeAttrs.Any())
+                return true;
+
+            // Filter by role
+            return docName switch
+            {
+                // Admin sees everything
+                "admin" => !requiredRoles.Any() || requiredRoles.Contains("admin"),
+                // Manager sees only if Manager role is explicitly allowed (not Admin-only)
+                "manager" => !requiredRoles.Any() || requiredRoles.Contains("manager"),
+                // Customer sees only endpoints without specific role requirements
+                "customer" => !requiredRoles.Any(),
+                _ => false
+            };
+        }
+        catch
+        {
+            // In case of any error, don't include the endpoint
+            return false;
+        }
     });
 
     // Add JWT Authentication to Swagger
@@ -133,7 +232,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+        Description = "JWT Authorization header using the Bearer scheme"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -160,10 +259,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Affiliate System API v1");
+        c.SwaggerEndpoint("/swagger/all/swagger.json", "All Endpoints");
+        c.SwaggerEndpoint("/swagger/admin/swagger.json", "Admin Role");
+        c.SwaggerEndpoint("/swagger/manager/swagger.json", "Manager Role");
+        c.SwaggerEndpoint("/swagger/customer/swagger.json", "Customer Role");
+        c.DocumentTitle = "Affiliate System API";
     });
     app.UseCors("DevelopmentPolicy");
 }
+
+// Serve static files from wwwroot
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using AffiliateSystem.Application.DTOs.Auth;
 using AffiliateSystem.Application.Interfaces;
+using AffiliateSystem.Infrastructure.Middleware;
 
 namespace AffiliateSystem.API.Controllers;
 
@@ -30,9 +31,9 @@ public class AuthController : ControllerBase
     {
         try
         {
-            // Get client IP address
-            request.IpAddress = GetClientIpAddress();
-            request.UserAgent = Request.Headers["User-Agent"].ToString();
+            // Get client IP address from middleware
+            request.IpAddress = HttpContext.GetClientIpAddress();
+            request.UserAgent = HttpContext.GetUserAgent();
 
             _logger.LogInformation("Login attempt from IP: {IpAddress} for email: {Email}",
                 request.IpAddress, request.Email);
@@ -125,29 +126,5 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "Error checking IP status: {IpAddress}", ipAddress);
             return StatusCode(500, new { message = "An error occurred while checking IP status" });
         }
-    }
-
-    /// <summary>
-    /// Get client IP address from request
-    /// </summary>
-    private string GetClientIpAddress()
-    {
-        // Check for forwarded IP (when behind proxy/load balancer)
-        var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            // X-Forwarded-For can contain multiple IPs, get the first one
-            return forwardedFor.Split(',')[0].Trim();
-        }
-
-        // Check for real IP header (some proxies use this)
-        var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(realIp))
-        {
-            return realIp;
-        }
-
-        // Fall back to remote IP address
-        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
     }
 }

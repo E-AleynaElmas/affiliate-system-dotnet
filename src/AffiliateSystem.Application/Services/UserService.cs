@@ -284,12 +284,17 @@ public class UserService : IUserService
     private string GenerateSecureReferralCode()
     {
         const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-        var random = new Random();
         var code = new char[8];
 
-        for (int i = 0; i < code.Length; i++)
+        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
         {
-            code[i] = chars[random.Next(chars.Length)];
+            var bytes = new byte[8];
+            rng.GetBytes(bytes);
+
+            for (int i = 0; i < code.Length; i++)
+            {
+                code[i] = chars[bytes[i] % chars.Length];
+            }
         }
 
         return new string(code);

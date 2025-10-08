@@ -7,6 +7,14 @@ public class DashboardDto
 {
     public UserDto UserInfo { get; set; } = new UserDto();
     public DashboardStats? Stats { get; set; }
+
+    // For Managers and Admins
+    public int TotalReferrals { get; set; }
+    public int ActiveReferralLinks { get; set; }
+    public List<ReferralLinkDto> ReferralLinks { get; set; } = new List<ReferralLinkDto>();
+
+    // Recent login attempts for the user
+    public List<LoginAttemptDto> RecentLoginAttempts { get; set; } = new List<LoginAttemptDto>();
 }
 
 /// <summary>

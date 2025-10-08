@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using AspNetCoreRateLimit;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using AffiliateSystem.Infrastructure.Data;
 using AffiliateSystem.Infrastructure.Repositories;
 using AffiliateSystem.Infrastructure.Services;
@@ -12,12 +14,17 @@ using AffiliateSystem.Infrastructure.Configuration;
 using AffiliateSystem.Application.Services;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Application.Mappings;
+using AffiliateSystem.Application.Validators;
 using AffiliateSystem.Domain.Interfaces;
 using System.Text;
+using AffiliateSystem.Application.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
+
+// Configuration
+builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection(SecuritySettings.SectionName));
 
 // Add Entity Framework Core with SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -61,6 +68,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Register Infrastructure Services
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
+builder.Services.AddScoped<ICacheService, MemoryCacheService>();
 builder.Services.AddHttpClient();
 
 // Add Rate Limiting
@@ -72,11 +80,17 @@ builder.Services.AddMemoryCache();
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// Add Controllers with XSS Protection
+// Add Controllers with Global Filters
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<GlobalXssProtectionAttribute>();
+    options.Filters.Add<LoggingActionFilter>();
 });
+
+// Add FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
 // Configure CORS (Allow any origin during development)
 builder.Services.AddCors(options =>
@@ -140,6 +154,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add Global Exception Handling (should be first)
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
+// Add Client Info Extraction
+app.UseMiddleware<ClientInfoMiddleware>();
 
 // Add IP Rate Limiting middleware
 app.UseIpRateLimiting();

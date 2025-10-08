@@ -39,6 +39,11 @@ public class User : BaseEntity
     public string FullName => $"{FirstName} {LastName}".Trim();
 
     /// <summary>
+    /// User's phone number (optional)
+    /// </summary>
+    public string? PhoneNumber { get; set; }
+
+    /// <summary>
     /// User role
     /// </summary>
     public UserRole Role { get; set; }

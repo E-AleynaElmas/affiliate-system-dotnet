@@ -1,6 +1,5 @@
 using AutoMapper;
 using AffiliateSystem.Application.DTOs.Common;
-using AffiliateSystem.Application.DTOs.Dashboard;
 using AffiliateSystem.Application.DTOs.User;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Domain.Entities;
@@ -159,10 +158,11 @@ public class UserService : IUserService
         }
 
         // Get recent login attempts
-        var loginAttempts = await _loginAttemptRepository.FindAsync(
-            a => a.UserId == userId,
-            orderBy: q => q.OrderByDescending(a => a.CreatedAt),
-            take: 10);
+        var allLoginAttempts = await _loginAttemptRepository.FindAsync(
+            a => a.UserId == userId);
+        var loginAttempts = allLoginAttempts
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(10);
 
         dashboard.RecentLoginAttempts = loginAttempts.Select(a => new LoginAttemptDto
         {

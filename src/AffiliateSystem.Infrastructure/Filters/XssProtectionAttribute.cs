@@ -47,7 +47,7 @@ public class XssProtectionAttribute : ActionFilterAttribute
     /// <summary>
     /// Sanitize object recursively
     /// </summary>
-    private object SanitizeObject(object obj)
+    private object? SanitizeObject(object? obj)
     {
         if (obj == null)
             return obj;
@@ -57,7 +57,7 @@ public class XssProtectionAttribute : ActionFilterAttribute
         // Handle string
         if (type == typeof(string))
         {
-            return SanitizeString(obj.ToString());
+            return SanitizeString(obj.ToString() ?? string.Empty);
         }
 
         // Handle collections
@@ -156,20 +156,20 @@ public class GlobalXssProtectionAttribute : IActionFilter
         if (context.HttpContext.Response != null)
         {
             // Content Security Policy
-            context.HttpContext.Response.Headers.Add("Content-Security-Policy",
-                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
+            context.HttpContext.Response.Headers["Content-Security-Policy"] =
+                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';";
 
             // X-Content-Type-Options
-            context.HttpContext.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+            context.HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
             // X-Frame-Options
-            context.HttpContext.Response.Headers.Add("X-Frame-Options", "DENY");
+            context.HttpContext.Response.Headers["X-Frame-Options"] = "DENY";
 
             // X-XSS-Protection
-            context.HttpContext.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+            context.HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
 
             // Referrer Policy
-            context.HttpContext.Response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
+            context.HttpContext.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         }
     }
 }

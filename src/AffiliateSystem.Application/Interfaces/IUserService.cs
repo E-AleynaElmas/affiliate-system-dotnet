@@ -26,15 +26,15 @@ public interface IUserService
     /// <summary>
     /// Update user profile
     /// </summary>
-    Task<BaseResponse<UserDto>> UpdateUserAsync(Guid userId, UserDto userDto);
+    Task<BaseResponse<UserDto>> UpdateUserAsync(Guid userId, UpdateUserRequest request);
 
     /// <summary>
-    /// Deactivate user
+    /// Change user password
     /// </summary>
-    Task<BaseResponse<bool>> DeactivateUserAsync(Guid userId);
+    Task<BaseResponse<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
 
     /// <summary>
-    /// Generate referral code for user
+    /// Create referral link for user
     /// </summary>
-    Task<BaseResponse<string>> GenerateReferralCodeAsync(Guid userId);
+    Task<BaseResponse<ReferralLinkDto>> CreateReferralLinkAsync(Guid userId, CreateReferralLinkRequest request);
 }

@@ -61,8 +61,12 @@ public class GlobalExceptionHandlingMiddleware
                 errorResponse.Message = "Resource not found";
                 break;
 
-            case ArgumentException:
             case ArgumentNullException:
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                errorResponse.Message = "A required argument was null";
+                break;
+
+            case ArgumentException:
             case InvalidOperationException:
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 break;

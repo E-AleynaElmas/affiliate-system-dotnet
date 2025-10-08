@@ -32,7 +32,7 @@ public class UserController : ControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            var result = await _userService.GetCurrentUserAsync(userId);
+            var result = await _userService.GetUserByIdAsync(userId);
 
             if (result.Success)
             {
@@ -199,55 +199,57 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Activate or deactivate user (Admin only)
-    /// </summary>
-    [HttpPut("{id}/status")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> SetUserStatus(Guid id, [FromBody] SetUserStatusRequest request)
-    {
-        try
-        {
-            var result = await _userService.SetUserActiveStatusAsync(id, request.IsActive);
+    // TODO: Implement SetUserActiveStatusAsync in UserService
+    // /// <summary>
+    // /// Activate or deactivate user (Admin only)
+    // /// </summary>
+    // [HttpPut("{id}/status")]
+    // [Authorize(Roles = "Admin")]
+    // public async Task<IActionResult> SetUserStatus(Guid id, [FromBody] SetUserStatusRequest request)
+    // {
+    //     try
+    //     {
+    //         var result = await _userService.SetUserActiveStatusAsync(id, request.IsActive);
 
-            if (result.Success)
-            {
-                return Ok(result);
-            }
+    //         if (result.Success)
+    //         {
+    //             return Ok(result);
+    //         }
 
-            return BadRequest(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error setting user status for id: {UserId}", id);
-            return StatusCode(500, new { message = "An error occurred while setting user status" });
-        }
-    }
+    //         return BadRequest(result);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _logger.LogError(ex, "Error setting user status for id: {UserId}", id);
+    //         return StatusCode(500, new { message = "An error occurred while setting user status" });
+    //     }
+    // }
 
-    /// <summary>
-    /// Delete user (Admin only)
-    /// </summary>
-    [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> DeleteUser(Guid id)
-    {
-        try
-        {
-            var result = await _userService.DeleteUserAsync(id);
+    // TODO: Implement DeleteUserAsync in UserService
+    // /// <summary>
+    // /// Delete user (Admin only)
+    // /// </summary>
+    // [HttpDelete("{id}")]
+    // [Authorize(Roles = "Admin")]
+    // public async Task<IActionResult> DeleteUser(Guid id)
+    // {
+    //     try
+    //     {
+    //         var result = await _userService.DeleteUserAsync(id);
 
-            if (result.Success)
-            {
-                return Ok(result);
-            }
+    //         if (result.Success)
+    //         {
+    //             return Ok(result);
+    //         }
 
-            return BadRequest(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting user with id: {UserId}", id);
-            return StatusCode(500, new { message = "An error occurred while deleting user" });
-        }
-    }
+    //         return BadRequest(result);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _logger.LogError(ex, "Error deleting user with id: {UserId}", id);
+    //         return StatusCode(500, new { message = "An error occurred while deleting user" });
+    //     }
+    // }
 
     /// <summary>
     /// Get current user ID from JWT claims

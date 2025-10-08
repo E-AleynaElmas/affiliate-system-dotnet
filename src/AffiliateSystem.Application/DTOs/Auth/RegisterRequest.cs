@@ -19,7 +19,7 @@ public class RegisterRequest
 
     [Required(ErrorMessage = "Password confirmation is required")]
     [Compare("Password", ErrorMessage = "Passwords do not match")]
-    public string ConfirmPassword { get; set; } = string.Empty;
+    public string PasswordConfirm { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "First name is required")]
     [MaxLength(100, ErrorMessage = "First name cannot exceed 100 characters")]
@@ -28,6 +28,12 @@ public class RegisterRequest
     [Required(ErrorMessage = "Last name is required")]
     [MaxLength(100, ErrorMessage = "Last name cannot exceed 100 characters")]
     public string LastName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional phone number
+    /// </summary>
+    [Phone(ErrorMessage = "Invalid phone number format")]
+    public string? PhoneNumber { get; set; }
 
     /// <summary>
     /// Referral code if user is registering via referral link

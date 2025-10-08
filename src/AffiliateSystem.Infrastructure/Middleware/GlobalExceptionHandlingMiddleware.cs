@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using AffiliateSystem.Application.DTOs.Common;
 using System.Net;
 using System.Text.Json;
+using AffiliateSystem.Infrastructure.Configuration;
 
 namespace AffiliateSystem.Infrastructure.Middleware;
 
@@ -98,10 +99,7 @@ public class GlobalExceptionHandlingMiddleware
             };
         }
 
-        var jsonResponse = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var jsonResponse = JsonSerializer.Serialize(errorResponse, JsonConfiguration.ErrorOptions);
 
         await response.WriteAsync(jsonResponse);
     }

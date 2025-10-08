@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text.Json;
+using AffiliateSystem.Infrastructure.Utilities;
+using AffiliateSystem.Infrastructure.Configuration;
 
 namespace AffiliateSystem.Infrastructure.Filters;
 
@@ -36,14 +38,10 @@ public class LoggingActionFilter : IAsyncActionFilter
         {
             if (context.ActionArguments.Count > 0)
             {
-                var arguments = JsonSerializer.Serialize(context.ActionArguments, new JsonSerializerOptions
-                {
-                    WriteIndented = false,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                });
+                var arguments = JsonSerializer.Serialize(context.ActionArguments, JsonConfiguration.LoggingOptions);
 
                 // Don't log sensitive data
-                var sanitizedArguments = SanitizeSensitiveData(arguments);
+                var sanitizedArguments = SensitiveDataSanitizer.SanitizeJson(arguments);
                 _logger.LogDebug("Action arguments: {Arguments}", sanitizedArguments);
             }
         }
@@ -72,23 +70,6 @@ public class LoggingActionFilter : IAsyncActionFilter
                     actionName, statusCode);
             }
         }
-    }
-
-    private string SanitizeSensitiveData(string data)
-    {
-        // Replace sensitive field values with masked values
-        var sensitiveFields = new[] { "password", "passwordConfirm", "token", "secret", "key", "authorization" };
-
-        foreach (var field in sensitiveFields)
-        {
-            data = System.Text.RegularExpressions.Regex.Replace(
-                data,
-                $@"""{field}""\s*:\s*""[^""]+""",
-                $@"""{field}"":""[REDACTED]""",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        }
-
-        return data;
     }
 }
 

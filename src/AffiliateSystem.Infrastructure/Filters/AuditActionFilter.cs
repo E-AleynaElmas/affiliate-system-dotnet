@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Linq;
 using AffiliateSystem.Infrastructure.Middleware;
+using AffiliateSystem.Infrastructure.Utilities;
 
 namespace AffiliateSystem.Infrastructure.Filters;
 
@@ -75,16 +76,9 @@ public class AuditActionFilter : IAsyncActionFilter
                 continue;
             }
 
-            // Don't log sensitive data
-            var sensitiveKeys = new[] { "password", "token", "secret", "key" };
-            if (sensitiveKeys.Any(k => argument.Key.ToLower().Contains(k)))
-            {
-                sanitized[argument.Key] = "[REDACTED]";
-            }
-            else
-            {
-                sanitized[argument.Key] = argument.Value;
-            }
+            sanitized[argument.Key] = SensitiveDataSanitizer.IsSensitiveKey(argument.Key)
+                ? "[REDACTED]"
+                : argument.Value;
         }
 
         return sanitized;

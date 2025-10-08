@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using AffiliateSystem.Domain.Entities;
 using AffiliateSystem.Domain.Interfaces;
 using AffiliateSystem.Infrastructure.Data;
+using AffiliateSystem.Domain.Extensions;
 
 namespace AffiliateSystem.Infrastructure.Repositories;
 
@@ -34,14 +35,14 @@ public class LoginAttemptRepository : Repository<LoginAttempt>, ILoginAttemptRep
 
     public async Task<int> CountFailedAsync(int hoursWindow = 24)
     {
-        var since = DateTime.UtcNow.AddHours(-hoursWindow);
+        var since = DateTimeExtensions.HoursAgo(hoursWindow);
         return await _context.LoginAttempts
             .CountAsync(a => !a.IsSuccessful && a.CreatedAt >= since);
     }
 
     public async Task<IEnumerable<LoginAttempt>> GetFailedByIpAsync(string ipAddress, int hoursWindow = 1)
     {
-        var since = DateTime.UtcNow.AddHours(-hoursWindow);
+        var since = DateTimeExtensions.HoursAgo(hoursWindow);
         return await _context.LoginAttempts
             .Where(a => a.IpAddress == ipAddress && !a.IsSuccessful && a.CreatedAt >= since)
             .OrderByDescending(a => a.CreatedAt)
@@ -50,7 +51,7 @@ public class LoginAttemptRepository : Repository<LoginAttempt>, ILoginAttemptRep
 
     public async Task<int> RemoveOldAttemptsAsync(int daysOld = 30)
     {
-        var cutoffDate = DateTime.UtcNow.AddDays(-daysOld);
+        var cutoffDate = DateTimeExtensions.DaysAgo(daysOld);
         var oldAttempts = await _context.LoginAttempts
             .Where(a => a.CreatedAt < cutoffDate)
             .ToListAsync();

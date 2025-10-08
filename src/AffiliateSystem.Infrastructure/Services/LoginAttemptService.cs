@@ -4,6 +4,7 @@ using AffiliateSystem.Application.DTOs.User;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Domain.Entities;
 using AffiliateSystem.Domain.Interfaces;
+using AffiliateSystem.Domain.Extensions;
 using System.Linq;
 
 namespace AffiliateSystem.Infrastructure.Services;
@@ -78,7 +79,7 @@ public class LoginAttemptService : ILoginAttemptService
 
     public async Task<int> GetFailedAttemptsCountAsync(Guid userId, int hoursWindow = 24)
     {
-        var since = DateTime.UtcNow.AddHours(-hoursWindow);
+        var since = DateTimeExtensions.HoursAgo(hoursWindow);
         var attempts = await _repository.FindAsync(a =>
             a.UserId == userId &&
             !a.IsSuccessful &&
@@ -100,7 +101,7 @@ public class LoginAttemptService : ILoginAttemptService
 
     public async Task<LoginAttemptStats> GetStatsAsync(int hoursWindow = 24)
     {
-        var since = DateTime.UtcNow.AddHours(-hoursWindow);
+        var since = DateTimeExtensions.HoursAgo(hoursWindow);
         var attempts = await _repository.FindAsync(a => a.CreatedAt >= since);
         var attemptsList = attempts.ToList();
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AffiliateSystem.Application.Interfaces;
+using AffiliateSystem.Infrastructure.Configuration;
 
 namespace AffiliateSystem.Infrastructure.Middleware;
 
@@ -49,10 +50,7 @@ public class IpBlockingMiddleware
                         (blockInfo.BlockedUntil - DateTime.UtcNow).TotalMinutes : 0
                 };
 
-                var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+                var jsonResponse = JsonSerializer.Serialize(response, JsonConfiguration.ErrorOptions);
 
                 await context.Response.WriteAsync(jsonResponse);
                 return;

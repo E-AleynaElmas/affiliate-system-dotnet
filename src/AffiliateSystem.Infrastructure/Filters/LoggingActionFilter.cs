@@ -22,7 +22,6 @@ public class LoggingActionFilter : IAsyncActionFilter
     {
         var stopwatch = Stopwatch.StartNew();
 
-        // Log action start
         var actionName = context.ActionDescriptor.DisplayName;
         var controllerName = context.Controller.GetType().Name;
         var httpMethod = context.HttpContext.Request.Method;
@@ -49,12 +48,10 @@ public class LoggingActionFilter : IAsyncActionFilter
             }
         }
 
-        // Execute action
         var executedContext = await next();
 
         stopwatch.Stop();
 
-        // Log action result
         if (executedContext.Exception != null)
         {
             _logger.LogError(executedContext.Exception,
@@ -67,7 +64,6 @@ public class LoggingActionFilter : IAsyncActionFilter
                 "Executed action {ActionName} on controller {ControllerName} in {ElapsedMilliseconds}ms",
                 actionName, controllerName, stopwatch.ElapsedMilliseconds);
 
-            // Log response status code
             var statusCode = context.HttpContext.Response.StatusCode;
             if (statusCode >= 400)
             {

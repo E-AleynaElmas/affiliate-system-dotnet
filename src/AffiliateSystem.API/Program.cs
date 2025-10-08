@@ -81,6 +81,10 @@ builder.Services.AddRateLimiting(builder.Configuration);
 // Add Memory Cache (required for rate limiting and CAPTCHA)
 builder.Services.AddMemoryCache();
 
+// Add Health Checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>("database");
+
 // Configure SecuritySettings
 builder.Services.Configure<SecuritySettings>(
     builder.Configuration.GetSection(SecuritySettings.SectionName));
@@ -181,11 +185,28 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Map Health Check endpoints
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
 // Ensure database is created and migrations are applied
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     context.Database.EnsureCreated();
+
+    // Seed test data in development environment
+    if (app.Environment.IsDevelopment())
+    {
+        await DataSeeder.SeedAsync(app.Services);
+    }
 }
 
 app.Run();

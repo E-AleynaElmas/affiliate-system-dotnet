@@ -27,9 +27,4 @@ public interface IAuthService
     /// Check if IP is blocked
     /// </summary>
     Task<bool> IsIpBlockedAsync(string ipAddress);
-
-    /// <summary>
-    /// Record login attempt
-    /// </summary>
-    Task RecordLoginAttemptAsync(string email, string ipAddress, bool isSuccessful, string? userAgent = null, string? failureReason = null);
 }

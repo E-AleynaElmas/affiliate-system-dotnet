@@ -65,7 +65,7 @@ public class AuthService : IAuthService
     {
         if (!await ValidateCaptchaIfProvidedAsync(request.CaptchaToken, request.IpAddress))
         {
-            await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid CAPTCHA");
+            await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid CAPTCHA");
             return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
         }
 
@@ -78,13 +78,13 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "User not found");
+            await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "User not found");
             return BaseResponse<LoginResponse>.ErrorResponse("Invalid email or password");
         }
 
         if (user.LockoutEndDate.HasValue && user.LockoutEndDate > DateTime.UtcNow)
         {
-            await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Account locked", user.Id);
+            await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Account locked", user.Id);
             return BaseResponse<LoginResponse>.ErrorResponse($"Account is locked until {user.LockoutEndDate.Value:yyyy-MM-dd HH:mm}");
         }
 
@@ -100,14 +100,14 @@ public class AuthService : IAuthService
             _userRepository.Update(user);
             await _unitOfWork.CompleteAsync();
 
-            await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid password", user.Id);
+            await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid password", user.Id);
 
             return BaseResponse<LoginResponse>.ErrorResponse("Invalid email or password");
         }
 
         if (!user.IsActive)
         {
-            await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Account inactive", user.Id);
+            await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Account inactive", user.Id);
             return BaseResponse<LoginResponse>.ErrorResponse("Your account is inactive. Please contact support.");
         }
 
@@ -116,7 +116,7 @@ public class AuthService : IAuthService
         _userRepository.Update(user);
         await _unitOfWork.CompleteAsync();
 
-        await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", true, request.UserAgent, null, user.Id);
+        await RecordLoginAttemptAsync(request.Email, request.IpAddress ?? "", true, request.UserAgent, null, user.Id);
 
         var response = new LoginResponse
         {
@@ -193,58 +193,7 @@ public class AuthService : IAuthService
         return blockedIp != null && blockedIp.IsActive;
     }
 
-    public async Task RecordLoginAttemptAsync(string email, string ipAddress, bool isSuccessful,
-        string? userAgent = null, string? failureReason = null)
-    {
-        var attempt = new LoginAttempt
-        {
-            Email = email,
-            IpAddress = ipAddress,
-            IsSuccessful = isSuccessful,
-            UserAgent = userAgent,
-            FailureReason = failureReason
-        };
-
-        if (isSuccessful)
-        {
-            var user = await _userRepository.SingleOrDefaultAsync(u => u.Email == email);
-            if (user != null)
-            {
-                attempt.UserId = user.Id;
-            }
-        }
-
-        await _loginAttemptRepository.AddAsync(attempt);
-        await _unitOfWork.CompleteAsync();
-    }
-
-    private async Task CheckAndBlockIpAsync(string ipAddress)
-    {
-        var failedAttempts = await _loginAttemptRepository.FindAsync(
-            a => a.IpAddress == ipAddress &&
-            !a.IsSuccessful &&
-            a.CreatedAt > DateTime.UtcNow.AddHours(-1));
-
-        if (failedAttempts.Count() >= 10)
-        {
-            var existingBlock = await _blockedIpRepository.SingleOrDefaultAsync(b => b.IpAddress == ipAddress);
-
-            if (existingBlock == null)
-            {
-                var blockedIp = new BlockedIp
-                {
-                    IpAddress = ipAddress,
-                    Reason = "10 failed login attempts within 1 hour",
-                    BlockedUntil = DateTime.UtcNow.AddHours(24),
-                    FailedAttemptCount = failedAttempts.Count()
-                };
-
-                await _blockedIpRepository.AddAsync(blockedIp);
-                await _unitOfWork.CompleteAsync();
-            }
-        }
-    }
-    private async Task RecordLoginAttemptWithServiceAsync(string email, string ipAddress, bool isSuccessful,
+    private async Task RecordLoginAttemptAsync(string email, string ipAddress, bool isSuccessful,
         string? userAgent, string? failureReason = null, Guid? userId = null)
     {
         var attemptDto = new DTOs.User.LoginAttemptDto

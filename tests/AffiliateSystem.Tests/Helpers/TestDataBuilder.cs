@@ -145,8 +145,8 @@ public static class TestDataBuilder
             IpAddress = ipAddress,
             Reason = "Too many failed login attempts",
             BlockedUntil = isPermanent ? null : DateTime.UtcNow.AddHours(24),
-            IsPermanent = isPermanent,
             FailedAttemptCount = 10,
+            IsManualBlock = false,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -166,7 +166,6 @@ public static class TestDataBuilder
             IpAddress = ipAddress,
             IsSuccessful = isSuccessful,
             UserAgent = "Mozilla/5.0 Test Browser",
-            AttemptedAt = DateTime.UtcNow,
             FailureReason = isSuccessful ? null : "Invalid password",
             CreatedAt = DateTime.UtcNow
         };

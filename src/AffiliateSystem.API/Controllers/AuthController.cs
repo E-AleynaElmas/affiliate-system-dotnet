@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using AffiliateSystem.Application.DTOs.Auth;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Infrastructure.Middleware;
+using System.Security.Claims;
 
 namespace AffiliateSystem.API.Controllers;
 
@@ -29,32 +30,21 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        try
+        request.IpAddress = HttpContext.GetClientIpAddress();
+        request.UserAgent = HttpContext.GetUserAgent();
+
+        _logger.LogInformation("Login attempt: {Email} from {IpAddress}", request.Email, request.IpAddress);
+
+        var result = await _authService.LoginAsync(request);
+
+        if (result.Success)
         {
-            // Get client IP address from middleware
-            request.IpAddress = HttpContext.GetClientIpAddress();
-            request.UserAgent = HttpContext.GetUserAgent();
-
-            _logger.LogInformation("Login attempt from IP: {IpAddress} for email: {Email}",
-                request.IpAddress, request.Email);
-
-            var result = await _authService.LoginAsync(request);
-
-            if (result.Success)
-            {
-                _logger.LogInformation("Successful login for email: {Email}", request.Email);
-                return Ok(result);
-            }
-
-            _logger.LogWarning("Failed login attempt for email: {Email}. Reason: {Message}",
-                request.Email, result.Message);
-            return BadRequest(result);
+            _logger.LogInformation("Login successful: {Email}", request.Email);
+            return Ok(result);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
-            return StatusCode(500, new { message = "An error occurred during login" });
-        }
+
+        _logger.LogWarning("Login failed: {Email} - {Message}", request.Email, result.Message);
+        return BadRequest(result);
     }
 
     /// <summary>
@@ -65,27 +55,18 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        try
+        _logger.LogInformation("Registration attempt: {Email}", request.Email);
+
+        var result = await _authService.RegisterAsync(request);
+
+        if (result.Success)
         {
-            _logger.LogInformation("Registration attempt for email: {Email}", request.Email);
-
-            var result = await _authService.RegisterAsync(request);
-
-            if (result.Success)
-            {
-                _logger.LogInformation("Successful registration for email: {Email}", request.Email);
-                return Ok(result);
-            }
-
-            _logger.LogWarning("Failed registration for email: {Email}. Reason: {Message}",
-                request.Email, result.Message);
-            return BadRequest(result);
+            _logger.LogInformation("Registration successful: {Email}", request.Email);
+            return Ok(result);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during registration for email: {Email}", request.Email);
-            return StatusCode(500, new { message = "An error occurred during registration" });
-        }
+
+        _logger.LogWarning("Registration failed: {Email} - {Message}", request.Email, result.Message);
+        return BadRequest(result);
     }
 
     /// <summary>
@@ -96,16 +77,13 @@ public class AuthController : ControllerBase
     [HttpGet("validate-referral/{code}")]
     public async Task<IActionResult> ValidateReferralCode(string code)
     {
-        try
+        if (string.IsNullOrWhiteSpace(code))
         {
-            var isValid = await _authService.ValidateReferralCodeAsync(code);
-            return Ok(new { isValid });
+            return BadRequest(new { message = "Referral code is required" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error validating referral code: {Code}", code);
-            return StatusCode(500, new { message = "An error occurred while validating referral code" });
-        }
+
+        var isValid = await _authService.ValidateReferralCodeAsync(code);
+        return Ok(new { isValid });
     }
 
     /// <summary>
@@ -116,15 +94,12 @@ public class AuthController : ControllerBase
     [HttpGet("check-ip/{ipAddress}")]
     public async Task<IActionResult> CheckIpStatus(string ipAddress)
     {
-        try
+        if (string.IsNullOrWhiteSpace(ipAddress))
         {
-            var isBlocked = await _authService.IsIpBlockedAsync(ipAddress);
-            return Ok(new { isBlocked });
+            return BadRequest(new { message = "IP address is required" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking IP status: {IpAddress}", ipAddress);
-            return StatusCode(500, new { message = "An error occurred while checking IP status" });
-        }
+
+        var isBlocked = await _authService.IsIpBlockedAsync(ipAddress);
+        return Ok(new { isBlocked });
     }
 }

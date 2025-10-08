@@ -6,12 +6,9 @@ using System.Security.Claims;
 
 namespace AffiliateSystem.API.Controllers;
 
-/// <summary>
-/// User management controller
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Requires authentication for all endpoints
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -23,9 +20,6 @@ public class UserController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>
-    /// Get current user profile
-    /// </summary>
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {
@@ -33,13 +27,7 @@ public class UserController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var result = await _userService.GetUserByIdAsync(userId);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
@@ -48,9 +36,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Update current user profile
-    /// </summary>
     [HttpPut("profile")]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserRequest request)
     {
@@ -58,13 +43,7 @@ public class UserController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var result = await _userService.UpdateUserAsync(userId, request);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
@@ -73,9 +52,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Change password
-    /// </summary>
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
@@ -83,13 +59,7 @@ public class UserController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var result = await _userService.ChangePasswordAsync(userId, request);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
@@ -98,9 +68,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Get user dashboard
-    /// </summary>
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {
@@ -108,13 +75,7 @@ public class UserController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var result = await _userService.GetDashboardAsync(userId);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
@@ -123,9 +84,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Create referral link (Manager and Admin only)
-    /// </summary>
     [HttpPost("referral-link")]
     [Authorize(Roles = "Manager,Admin")]
     public async Task<IActionResult> CreateReferralLink([FromBody] CreateReferralLinkRequest request)
@@ -134,13 +92,7 @@ public class UserController : ControllerBase
         {
             var userId = GetCurrentUserId();
             var result = await _userService.CreateReferralLinkAsync(userId, request);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
@@ -149,9 +101,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Get all users (Admin only)
-    /// </summary>
     [HttpGet("all")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAllUsers()
@@ -159,13 +108,7 @@ public class UserController : ControllerBase
         try
         {
             var result = await _userService.GetAllUsersAsync();
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
@@ -174,9 +117,6 @@ public class UserController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Get user by ID (Admin only)
-    /// </summary>
     [HttpGet("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUserById(Guid id)
@@ -184,13 +124,7 @@ public class UserController : ControllerBase
         try
         {
             var result = await _userService.GetUserByIdAsync(id);
-
-            if (result.Success)
-            {
-                return Ok(result);
-            }
-
-            return NotFound(result);
+            return result.Success ? Ok(result) : NotFound(result);
         }
         catch (Exception ex)
         {
@@ -199,61 +133,6 @@ public class UserController : ControllerBase
         }
     }
 
-    // TODO: Implement SetUserActiveStatusAsync in UserService
-    // /// <summary>
-    // /// Activate or deactivate user (Admin only)
-    // /// </summary>
-    // [HttpPut("{id}/status")]
-    // [Authorize(Roles = "Admin")]
-    // public async Task<IActionResult> SetUserStatus(Guid id, [FromBody] SetUserStatusRequest request)
-    // {
-    //     try
-    //     {
-    //         var result = await _userService.SetUserActiveStatusAsync(id, request.IsActive);
-
-    //         if (result.Success)
-    //         {
-    //             return Ok(result);
-    //         }
-
-    //         return BadRequest(result);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _logger.LogError(ex, "Error setting user status for id: {UserId}", id);
-    //         return StatusCode(500, new { message = "An error occurred while setting user status" });
-    //     }
-    // }
-
-    // TODO: Implement DeleteUserAsync in UserService
-    // /// <summary>
-    // /// Delete user (Admin only)
-    // /// </summary>
-    // [HttpDelete("{id}")]
-    // [Authorize(Roles = "Admin")]
-    // public async Task<IActionResult> DeleteUser(Guid id)
-    // {
-    //     try
-    //     {
-    //         var result = await _userService.DeleteUserAsync(id);
-
-    //         if (result.Success)
-    //         {
-    //             return Ok(result);
-    //         }
-
-    //         return BadRequest(result);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _logger.LogError(ex, "Error deleting user with id: {UserId}", id);
-    //         return StatusCode(500, new { message = "An error occurred while deleting user" });
-    //     }
-    // }
-
-    /// <summary>
-    /// Get current user ID from JWT claims
-    /// </summary>
     private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -265,12 +144,4 @@ public class UserController : ControllerBase
 
         return userId;
     }
-}
-
-/// <summary>
-/// Request to set user active status
-/// </summary>
-public class SetUserStatusRequest
-{
-    public bool IsActive { get; set; }
 }

@@ -5,8 +5,7 @@ using AffiliateSystem.Infrastructure.Data;
 namespace AffiliateSystem.Infrastructure.Repositories;
 
 /// <summary>
-/// Unit of Work implementation
-/// Manages database transactions and coordinates repositories
+/// Unit of Work implementation for managing database transactions
 /// </summary>
 public class UnitOfWork : IUnitOfWork
 {
@@ -18,25 +17,16 @@ public class UnitOfWork : IUnitOfWork
         _context = context;
     }
 
-    /// <summary>
-    /// Save all changes to database
-    /// </summary>
     public async Task<int> CompleteAsync()
     {
         return await _context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Begin a new transaction
-    /// </summary>
     public async Task BeginTransactionAsync()
     {
         _transaction = await _context.Database.BeginTransactionAsync();
     }
 
-    /// <summary>
-    /// Commit the current transaction
-    /// </summary>
     public async Task CommitAsync()
     {
         if (_transaction != null)
@@ -47,9 +37,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    /// <summary>
-    /// Rollback the current transaction
-    /// </summary>
     public async Task RollbackAsync()
     {
         if (_transaction != null)
@@ -60,9 +47,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    /// <summary>
-    /// Dispose resources
-    /// </summary>
     public void Dispose()
     {
         _transaction?.Dispose();

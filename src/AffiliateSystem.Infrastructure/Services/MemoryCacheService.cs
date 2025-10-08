@@ -33,16 +33,14 @@ public class MemoryCacheService : ICacheService
         }
         else
         {
-            options.SlidingExpiration = TimeSpan.FromMinutes(5); // Default sliding expiration
+            options.SlidingExpiration = TimeSpan.FromMinutes(5);
         }
 
-        // Track key for pattern removal
         lock (_lock)
         {
             _keys.Add(key);
         }
 
-        // Register callback to remove key from tracking when evicted
         options.RegisterPostEvictionCallback((evictedKey, evictedValue, reason, state) =>
         {
             lock (_lock)
@@ -114,19 +112,12 @@ public class MemoryCacheService : ICacheService
 /// </summary>
 public static class CacheKeys
 {
-    // User cache keys
     public static string User(Guid userId) => $"user:{userId}";
     public static string UserByEmail(string email) => $"user:email:{email}";
     public static string UserDashboard(Guid userId) => $"user:dashboard:{userId}";
-
-    // Referral cache keys
     public static string ReferralCode(string code) => $"referral:code:{code}";
     public static string UserReferralLinks(Guid userId) => $"referral:user:{userId}";
-
-    // IP blocking cache keys
     public static string BlockedIp(string ipAddress) => $"blocked:ip:{ipAddress}";
     public static string LoginAttempts(string ipAddress) => $"attempts:ip:{ipAddress}";
-
-    // Rate limiting cache keys
     public static string RateLimit(string ipAddress, string endpoint) => $"ratelimit:{endpoint}:{ipAddress}";
 }

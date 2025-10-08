@@ -9,7 +9,7 @@ using System.Linq;
 namespace AffiliateSystem.Infrastructure.Services;
 
 /// <summary>
-/// Service implementation for tracking login attempts
+/// Service for tracking login attempts
 /// </summary>
 public class LoginAttemptService : ILoginAttemptService
 {
@@ -35,7 +35,6 @@ public class LoginAttemptService : ILoginAttemptService
 
     public async Task RecordAttemptAsync(LoginAttemptDto attempt)
     {
-        // Create entity from DTO
         var entity = new LoginAttempt
         {
             Id = Guid.NewGuid(),
@@ -50,7 +49,6 @@ public class LoginAttemptService : ILoginAttemptService
         await _repository.AddAsync(entity);
         await _unitOfWork.CompleteAsync();
 
-        // Handle IP blocking logic
         if (!attempt.IsSuccessful)
         {
             await _ipBlockingService.RecordFailedAttemptAsync(
@@ -59,7 +57,6 @@ public class LoginAttemptService : ILoginAttemptService
         }
         else
         {
-            // Clear failed attempts on successful login
             await _ipBlockingService.ClearFailedAttemptsAsync(attempt.IpAddress);
         }
 
@@ -123,7 +120,6 @@ public class LoginAttemptService : ILoginAttemptService
     {
         var since = DateTime.UtcNow.AddHours(-hoursWindow);
         var attempts = await _repository.FindAsync(a => a.CreatedAt >= since);
-
         var attemptsList = attempts.ToList();
 
         var stats = new LoginAttemptStats
@@ -133,7 +129,6 @@ public class LoginAttemptService : ILoginAttemptService
             FailedAttempts = attemptsList.Count(a => !a.IsSuccessful)
         };
 
-        // Get top failed IPs
         stats.TopFailedIps = attemptsList
             .Where(a => !a.IsSuccessful)
             .GroupBy(a => a.IpAddress)
@@ -141,7 +136,6 @@ public class LoginAttemptService : ILoginAttemptService
             .Take(10)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        // Get failure reasons breakdown
         stats.FailureReasons = attemptsList
             .Where(a => !a.IsSuccessful && !string.IsNullOrEmpty(a.FailureReason))
             .GroupBy(a => a.FailureReason!)

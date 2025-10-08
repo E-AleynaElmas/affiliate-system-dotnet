@@ -51,12 +51,8 @@ public class AuthService : IAuthService
         _loginAttemptService = loginAttemptService;
     }
 
-    /// <summary>
-    /// User login
-    /// </summary>
     public async Task<BaseResponse<LoginResponse>> LoginAsync(LoginRequest request)
     {
-        // Validate CAPTCHA
         if (!string.IsNullOrEmpty(request.CaptchaToken))
         {
             var captchaValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaToken, request.IpAddress);
@@ -67,14 +63,11 @@ public class AuthService : IAuthService
             }
         }
 
-        // Check if IP is blocked using the new service
         if (!string.IsNullOrEmpty(request.IpAddress) && await _ipBlockingService.IsBlockedAsync(request.IpAddress))
         {
-            // Don't record attempt when IP is already blocked
             return BaseResponse<LoginResponse>.ErrorResponse("Your IP address has been temporarily blocked. Please try again later.");
         }
 
-        // Find user
         var user = await _userRepository.SingleOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
@@ -83,19 +76,16 @@ public class AuthService : IAuthService
             return BaseResponse<LoginResponse>.ErrorResponse("Invalid email or password");
         }
 
-        // Check if account is locked
         if (user.LockoutEndDate.HasValue && user.LockoutEndDate > DateTime.UtcNow)
         {
             await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Account locked", user.Id);
             return BaseResponse<LoginResponse>.ErrorResponse($"Account is locked until {user.LockoutEndDate.Value:yyyy-MM-dd HH:mm}");
         }
 
-        // Verify password
         if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash, user.PasswordSalt))
         {
             user.FailedLoginAttempts++;
 
-            // Lock account after 5 failed attempts
             if (user.FailedLoginAttempts >= 5)
             {
                 user.LockoutEndDate = DateTime.UtcNow.AddMinutes(30);
@@ -109,14 +99,12 @@ public class AuthService : IAuthService
             return BaseResponse<LoginResponse>.ErrorResponse("Invalid email or password");
         }
 
-        // Check if user is active
         if (!user.IsActive)
         {
             await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Account inactive", user.Id);
             return BaseResponse<LoginResponse>.ErrorResponse("Your account is inactive. Please contact support.");
         }
 
-        // Successful login
         user.FailedLoginAttempts = 0;
         user.LastLoginAt = DateTime.UtcNow;
         _userRepository.Update(user);
@@ -124,7 +112,6 @@ public class AuthService : IAuthService
 
         await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", true, request.UserAgent, null, user.Id);
 
-        // Create response with JWT token
         var response = new LoginResponse
         {
             Token = _jwtService.GenerateToken(user),
@@ -135,12 +122,8 @@ public class AuthService : IAuthService
         return BaseResponse<LoginResponse>.SuccessResponse(response, "Login successful");
     }
 
-    /// <summary>
-    /// User registration
-    /// </summary>
     public async Task<BaseResponse<LoginResponse>> RegisterAsync(RegisterRequest request)
     {
-        // Validate CAPTCHA for registration
         if (!string.IsNullOrEmpty(request.CaptchaToken))
         {
             var captchaValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaToken);
@@ -150,16 +133,13 @@ public class AuthService : IAuthService
             }
         }
 
-        // Check if email already exists
         if (await _userRepository.AnyAsync(u => u.Email == request.Email))
         {
             return BaseResponse<LoginResponse>.ErrorResponse("Email already registered");
         }
 
-        // Hash password
         var (hash, salt) = _passwordHasher.HashPassword(request.Password);
 
-        // Create new user
         var user = new User
         {
             Email = request.Email,
@@ -172,18 +152,15 @@ public class AuthService : IAuthService
             EmailConfirmed = false
         };
 
-        // Check referral code
         if (!string.IsNullOrEmpty(request.ReferralCode))
         {
             var referralLink = await _referralLinkRepository.SingleOrDefaultAsync(r => r.Code == request.ReferralCode);
 
             if (referralLink != null && referralLink.CanBeUsed())
             {
-                // Set role as Manager if referral is valid
                 user.Role = UserRole.Manager;
                 user.ReferredById = referralLink.CreatedByUserId;
 
-                // Update referral link usage
                 referralLink.UsageCount++;
                 _referralLinkRepository.Update(referralLink);
             }
@@ -192,7 +169,6 @@ public class AuthService : IAuthService
         await _userRepository.AddAsync(user);
         await _unitOfWork.CompleteAsync();
 
-        // Auto-login after registration with JWT token
         var response = new LoginResponse
         {
             Token = _jwtService.GenerateToken(user),
@@ -203,27 +179,18 @@ public class AuthService : IAuthService
         return BaseResponse<LoginResponse>.SuccessResponse(response, "Registration successful");
     }
 
-    /// <summary>
-    /// Validate referral code
-    /// </summary>
     public async Task<bool> ValidateReferralCodeAsync(string referralCode)
     {
         var referralLink = await _referralLinkRepository.SingleOrDefaultAsync(r => r.Code == referralCode);
         return referralLink != null && referralLink.CanBeUsed();
     }
 
-    /// <summary>
-    /// Check if IP is blocked
-    /// </summary>
     public async Task<bool> IsIpBlockedAsync(string ipAddress)
     {
         var blockedIp = await _blockedIpRepository.SingleOrDefaultAsync(b => b.IpAddress == ipAddress);
         return blockedIp != null && blockedIp.IsActive;
     }
 
-    /// <summary>
-    /// Record login attempt
-    /// </summary>
     public async Task RecordLoginAttemptAsync(string email, string ipAddress, bool isSuccessful,
         string? userAgent = null, string? failureReason = null)
     {
@@ -249,9 +216,6 @@ public class AuthService : IAuthService
         await _unitOfWork.CompleteAsync();
     }
 
-    /// <summary>
-    /// Check and block IP if necessary
-    /// </summary>
     private async Task CheckAndBlockIpAsync(string ipAddress)
     {
         var failedAttempts = await _loginAttemptRepository.FindAsync(
@@ -278,10 +242,6 @@ public class AuthService : IAuthService
             }
         }
     }
-
-    /// <summary>
-    /// Record login attempt using the new service
-    /// </summary>
     private async Task RecordLoginAttemptWithServiceAsync(string email, string ipAddress, bool isSuccessful,
         string? userAgent, string? failureReason = null, Guid? userId = null)
     {

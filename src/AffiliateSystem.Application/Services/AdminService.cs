@@ -114,18 +114,7 @@ public class AdminService : IAdminService
     public async Task<BaseResponse<List<BlockedIpDto>>> GetBlockedIpsAsync()
     {
         var blockedIps = await _blockedIpRepository.GetAllAsync();
-        var now = DateTime.UtcNow;
-
-        var blockedIpDtos = blockedIps.Select(b => new BlockedIpDto
-        {
-            IpAddress = b.IpAddress,
-            CreatedAt = b.CreatedAt,
-            BlockedUntil = b.BlockedUntil,
-            FailedAttemptCount = b.FailedAttemptCount,
-            IsManualBlock = b.IsManualBlock,
-            IsActive = b.BlockedUntil == null || b.BlockedUntil > now
-        }).ToList();
-
+        var blockedIpDtos = _mapper.Map<List<BlockedIpDto>>(blockedIps);
         return BaseResponse<List<BlockedIpDto>>.SuccessResponse(blockedIpDtos, "Blocked IPs retrieved successfully");
     }
 

@@ -163,7 +163,7 @@ builder.Services.AddSwaggerGen(c =>
 
             var requiredRoles = allAuthorizeAttrs
                 .Where(a => !string.IsNullOrEmpty(a.Roles))
-                .SelectMany(a => a.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                .SelectMany(a => a.Roles!.Split(',', StringSplitOptions.RemoveEmptyEntries))
                 .Select(r => r.Trim().ToLower())
                 .Distinct()
                 .ToList();

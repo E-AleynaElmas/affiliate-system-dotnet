@@ -2,6 +2,7 @@ using AutoMapper;
 using AffiliateSystem.Domain.Entities;
 using AffiliateSystem.Application.DTOs.User;
 using AffiliateSystem.Application.DTOs.Auth;
+using AffiliateSystem.Application.DTOs.Admin;
 
 namespace AffiliateSystem.Application.Mappings;
 
@@ -25,5 +26,9 @@ public class MappingProfile : Profile
 
         CreateMap<ReferralLink, ReferralLinkDto>()
             .ForMember(dest => dest.FullUrl, opt => opt.MapFrom(src => src.GetFullUrl("https://yourdomain.com")));
+
+        CreateMap<BlockedIp, BlockedIpDto>()
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src =>
+                src.BlockedUntil == null || src.BlockedUntil > DateTime.UtcNow));
     }
 }

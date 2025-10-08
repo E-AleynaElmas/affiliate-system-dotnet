@@ -66,7 +66,10 @@ public class XssProtectionAttribute : ActionFilterAttribute
             var sanitizedList = new List<object>();
             foreach (var item in collection)
             {
-                sanitizedList.Add(SanitizeObject(item));
+                if (item != null)
+                {
+                    sanitizedList.Add(SanitizeObject(item));
+                }
             }
             return sanitizedList;
         }

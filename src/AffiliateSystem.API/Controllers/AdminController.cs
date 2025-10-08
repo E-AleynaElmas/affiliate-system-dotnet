@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AffiliateSystem.Application.Interfaces;
+using AffiliateSystem.Infrastructure.Filters;
 
 namespace AffiliateSystem.API.Controllers;
 
@@ -28,6 +29,7 @@ public class AdminController : BaseApiController
     /// <param name="pageSize">Page size (default: 10)</param>
     /// <returns>List of users</returns>
     [HttpGet("users")]
+    [MonitorPerformance]
     public async Task<IActionResult> GetAllUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         _logger.LogInformation("Admin fetching all users - Page: {Page}, PageSize: {PageSize}", page, pageSize);
@@ -75,6 +77,7 @@ public class AdminController : BaseApiController
     /// </summary>
     /// <returns>Admin dashboard statistics</returns>
     [HttpGet("statistics")]
+    [MonitorPerformance]
     public async Task<IActionResult> GetStatistics()
     {
         _logger.LogInformation("Admin fetching system statistics");

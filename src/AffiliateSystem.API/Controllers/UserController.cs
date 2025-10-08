@@ -57,20 +57,4 @@ public class UserController : BaseApiController
         var result = await _userService.CreateReferralLinkAsync(userId, request);
         return ToActionResult(result);
     }
-
-    [HttpGet("all")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetAllUsers()
-    {
-        var result = await _userService.GetAllUsersAsync();
-        return ToActionResult(result);
-    }
-
-    [HttpGet("{id}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetUserById(Guid id)
-    {
-        var result = await _userService.GetUserByIdAsync(id);
-        return ToActionResultWithNotFound(result);
-    }
 }

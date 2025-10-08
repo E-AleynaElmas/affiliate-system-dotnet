@@ -8,6 +8,7 @@ using AffiliateSystem.Application.DTOs.Common;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
+using AffiliateSystem.Infrastructure.Middleware;
 
 namespace AffiliateSystem.Tests.Integration;
 
@@ -30,6 +31,13 @@ public class AuthControllerTests
         var httpContext = new DefaultHttpContext();
         httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("192.168.1.1");
         httpContext.Request.Headers["User-Agent"] = "Test Browser";
+
+        // Simulate ClientInfoMiddleware by setting the ClientInfo feature
+        httpContext.Features.Set(new ClientInfo
+        {
+            IpAddress = "192.168.1.1",
+            UserAgent = "Test Browser"
+        });
 
         _controller.ControllerContext = new ControllerContext
         {
@@ -113,6 +121,13 @@ public class AuthControllerTests
     {
         // Arrange
         _controller.HttpContext.Request.Headers["X-Forwarded-For"] = "10.0.0.1, 192.168.1.1";
+
+        // Simulate ClientInfoMiddleware processing the X-Forwarded-For header
+        _controller.HttpContext.Features.Set(new ClientInfo
+        {
+            IpAddress = "10.0.0.1",
+            UserAgent = "Test Browser"
+        });
 
         var loginRequest = TestDataBuilder.CreateLoginRequest();
         LoginRequest? capturedRequest = null;
@@ -204,8 +219,9 @@ public class AuthControllerTests
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
-        dynamic response = okResult!.Value!;
-        ((bool)response.isValid).Should().BeTrue();
+        var response = okResult!.Value as ValidateReferralResponse;
+        response.Should().NotBeNull();
+        response!.IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -223,8 +239,9 @@ public class AuthControllerTests
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
-        dynamic response = okResult!.Value!;
-        ((bool)response.isValid).Should().BeFalse();
+        var response = okResult!.Value as ValidateReferralResponse;
+        response.Should().NotBeNull();
+        response!.IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -242,8 +259,9 @@ public class AuthControllerTests
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
-        dynamic response = okResult!.Value!;
-        ((bool)response.isBlocked).Should().BeTrue();
+        var response = okResult!.Value as CheckIpStatusResponse;
+        response.Should().NotBeNull();
+        response!.IsBlocked.Should().BeTrue();
     }
 
     [Fact]
@@ -261,7 +279,8 @@ public class AuthControllerTests
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
-        dynamic response = okResult!.Value!;
-        ((bool)response.isBlocked).Should().BeFalse();
+        var response = okResult!.Value as CheckIpStatusResponse;
+        response.Should().NotBeNull();
+        response!.IsBlocked.Should().BeFalse();
     }
 }

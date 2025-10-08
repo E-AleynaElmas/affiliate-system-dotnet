@@ -86,7 +86,11 @@ public class AuthController : BaseApiController
         }
 
         var isValid = await _authService.ValidateReferralCodeAsync(code);
-        return Ok(new { isValid });
+        return Ok(new ValidateReferralResponse
+        {
+            IsValid = isValid,
+            Message = isValid ? "Referral code is valid" : "Referral code is invalid or expired"
+        });
     }
 
     /// <summary>
@@ -103,6 +107,10 @@ public class AuthController : BaseApiController
         }
 
         var isBlocked = await _authService.IsIpBlockedAsync(ipAddress);
-        return Ok(new { isBlocked });
+        return Ok(new CheckIpStatusResponse
+        {
+            IsBlocked = isBlocked,
+            Message = isBlocked ? "IP address is currently blocked" : "IP address is not blocked"
+        });
     }
 }

@@ -29,4 +29,14 @@ public class LoginAttemptDto
     /// Failure reason if unsuccessful
     /// </summary>
     public string? FailureReason { get; set; }
+
+    /// <summary>
+    /// User ID if known
+    /// </summary>
+    public Guid? UserId { get; set; }
+
+    /// <summary>
+    /// Email address used in the attempt (for tracking purposes)
+    /// </summary>
+    public string? Email { get; set; }
 }

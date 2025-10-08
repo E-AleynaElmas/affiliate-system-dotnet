@@ -58,6 +58,8 @@ builder.Services.AddAuthorization();
 
 // Register Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IBlockedIpRepository, BlockedIpRepository>();
+builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register Application Services
@@ -68,7 +70,9 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Register Infrastructure Services
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
-builder.Services.AddScoped<ICacheService, MemoryCacheService>();
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>(); // Changed to Singleton for caching
+builder.Services.AddScoped<IIpBlockingService, IpBlockingService>();
+builder.Services.AddScoped<ILoginAttemptService, LoginAttemptService>();
 builder.Services.AddHttpClient();
 
 // Add Rate Limiting
@@ -76,6 +80,10 @@ builder.Services.AddRateLimiting(builder.Configuration);
 
 // Add Memory Cache (required for rate limiting and CAPTCHA)
 builder.Services.AddMemoryCache();
+
+// Configure SecuritySettings
+builder.Services.Configure<SecuritySettings>(
+    builder.Configuration.GetSection(SecuritySettings.SectionName));
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));

@@ -51,4 +51,14 @@ public class SecuritySettings
     /// Default referral link maximum usages
     /// </summary>
     public int DefaultReferralLinkMaxUsages { get; set; } = 10;
+
+    /// <summary>
+    /// Number of failed attempts before progressive blocking
+    /// </summary>
+    public int ProgressiveBlockingThreshold { get; set; } = 15;
+
+    /// <summary>
+    /// Clear failed attempts after this many hours
+    /// </summary>
+    public int FailedAttemptsClearHours { get; set; } = 12;
 }

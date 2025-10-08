@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using AffiliateSystem.Domain.Entities;
-using AffiliateSystem.Domain.Interfaces;
-using System.Net;
+using System.Text.Json;
+using AffiliateSystem.Application.Interfaces;
 
 namespace AffiliateSystem.Infrastructure.Middleware;
 
@@ -20,60 +19,46 @@ public class IpBlockingMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, IRepository<BlockedIp> blockedIpRepository)
+    public async Task InvokeAsync(HttpContext context, IIpBlockingService ipBlockingService)
     {
-        var clientIp = GetClientIpAddress(context);
+        var clientIp = context.GetClientIpAddress(); // Use extension method from ClientInfoMiddleware
 
         if (!string.IsNullOrEmpty(clientIp))
         {
-            // Check if IP is blocked
-            var blockedIp = await blockedIpRepository.SingleOrDefaultAsync(b => b.IpAddress == clientIp);
-
-            if (blockedIp != null && blockedIp.IsActive)
+            // Check if IP is blocked using the service
+            if (await ipBlockingService.IsBlockedAsync(clientIp))
             {
                 _logger.LogWarning("Blocked IP {IpAddress} attempted to access {Path}",
                     clientIp, context.Request.Path);
 
+                // Get detailed block information
+                var blockInfo = await ipBlockingService.GetBlockInfoAsync(clientIp);
+
                 // Return 403 Forbidden
-                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                context.Response.StatusCode = 403;
                 context.Response.ContentType = "application/json";
 
                 var response = new
                 {
                     error = "Access denied",
-                    message = "Your IP address has been blocked due to suspicious activity.",
-                    blockedUntil = blockedIp.BlockedUntil?.ToString("yyyy-MM-dd HH:mm:ss UTC")
+                    message = "Your IP address has been temporarily blocked due to suspicious activity.",
+                    code = "IP_BLOCKED",
+                    blockedUntil = blockInfo?.BlockedUntil.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    reason = blockInfo?.Reason,
+                    remainingTime = blockInfo != null ?
+                        (blockInfo.BlockedUntil - DateTime.UtcNow).TotalMinutes : 0
                 };
 
-                await context.Response.WriteAsJsonAsync(response);
+                var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                await context.Response.WriteAsync(jsonResponse);
                 return;
             }
         }
 
         await _next(context);
-    }
-
-    /// <summary>
-    /// Extract client IP address from request
-    /// </summary>
-    private string GetClientIpAddress(HttpContext context)
-    {
-        // Check for forwarded IP (when behind proxy/load balancer)
-        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            // X-Forwarded-For can contain multiple IPs, get the first one
-            return forwardedFor.Split(',')[0].Trim();
-        }
-
-        // Check for real IP header (some proxies use this)
-        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(realIp))
-        {
-            return realIp;
-        }
-
-        // Fall back to remote IP address
-        return context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
     }
 }

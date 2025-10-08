@@ -257,9 +257,6 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
 // Database initialization
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    context.Database.EnsureCreated();
-
     if (app.Environment.IsDevelopment())
     {
         await DataSeeder.SeedAsync(app.Services);

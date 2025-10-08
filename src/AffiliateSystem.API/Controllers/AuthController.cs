@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using AffiliateSystem.Application.DTOs.Auth;
 using AffiliateSystem.Application.Interfaces;
 using AffiliateSystem.Infrastructure.Middleware;
-using System.Security.Claims;
 
 namespace AffiliateSystem.API.Controllers;
 
@@ -11,7 +10,7 @@ namespace AffiliateSystem.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
@@ -40,11 +39,13 @@ public class AuthController : ControllerBase
         if (result.Success)
         {
             _logger.LogInformation("Login successful: {Email}", request.Email);
-            return Ok(result);
+        }
+        else
+        {
+            _logger.LogWarning("Login failed: {Email} - {Message}", request.Email, result.Message);
         }
 
-        _logger.LogWarning("Login failed: {Email} - {Message}", request.Email, result.Message);
-        return BadRequest(result);
+        return ToActionResult(result);
     }
 
     /// <summary>
@@ -62,11 +63,13 @@ public class AuthController : ControllerBase
         if (result.Success)
         {
             _logger.LogInformation("Registration successful: {Email}", request.Email);
-            return Ok(result);
+        }
+        else
+        {
+            _logger.LogWarning("Registration failed: {Email} - {Message}", request.Email, result.Message);
         }
 
-        _logger.LogWarning("Registration failed: {Email} - {Message}", request.Email, result.Message);
-        return BadRequest(result);
+        return ToActionResult(result);
     }
 
     /// <summary>

@@ -18,5 +18,12 @@ public class MappingProfile : Profile
 
         CreateMap<User, UserInfo>()
             .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
+
+        CreateMap<LoginAttempt, LoginAttemptDto>()
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+            .ForMember(dest => dest.AttemptedAt, opt => opt.MapFrom(src => src.CreatedAt));
+
+        CreateMap<ReferralLink, ReferralLinkDto>()
+            .ForMember(dest => dest.FullUrl, opt => opt.MapFrom(src => src.GetFullUrl("https://yourdomain.com")));
     }
 }

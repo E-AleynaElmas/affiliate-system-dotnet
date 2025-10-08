@@ -11,17 +11,9 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {
     public RegisterRequestValidator()
     {
-        RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required")
-            .EmailAddress().WithMessage("Please provide a valid email address")
-            .MaximumLength(256).WithMessage("Email must not exceed 256 characters");
+        RuleFor(x => x.Email).EmailRules();
 
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required")
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters long")
-            .MaximumLength(128).WithMessage("Password must not exceed 128 characters")
-            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]")
-            .WithMessage("Password must contain at least one uppercase letter, one lowercase letter, one number and one special character");
+        RuleFor(x => x.Password).PasswordRules(requireComplexity: true);
 
         RuleFor(x => x.PasswordConfirm)
             .NotEmpty().WithMessage("Password confirmation is required")
@@ -37,9 +29,7 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .MaximumLength(100).WithMessage("Last name must not exceed 100 characters")
             .Matches(@"^[a-zA-ZğüşöçİĞÜŞÖÇ\s]+$").WithMessage("Last name can only contain letters");
 
-        RuleFor(x => x.PhoneNumber)
-            .Matches(@"^\+?[1-9]\d{1,14}$").WithMessage("Please provide a valid phone number")
-            .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
+        RuleFor(x => x.PhoneNumber).PhoneNumberRules();
 
         RuleFor(x => x.ReferralCode)
             .Length(8).WithMessage("Invalid referral code format")

@@ -71,18 +71,9 @@ public class LoginAttemptService : ILoginAttemptService
 
         var recentAttempts = attempts
             .OrderByDescending(a => a.CreatedAt)
-            .Take(count)
-            .Select(a => new LoginAttemptDto
-            {
-                UserId = a.UserId,
-                IpAddress = a.IpAddress,
-                IsSuccessful = a.IsSuccessful,
-                AttemptedAt = a.CreatedAt,
-                UserAgent = a.UserAgent,
-                FailureReason = a.FailureReason
-            });
+            .Take(count);
 
-        return recentAttempts;
+        return _mapper.Map<IEnumerable<LoginAttemptDto>>(recentAttempts);
     }
 
     public async Task<int> GetFailedAttemptsCountAsync(Guid userId, int hoursWindow = 24)
@@ -102,18 +93,9 @@ public class LoginAttemptService : ILoginAttemptService
 
         var recentAttempts = attempts
             .OrderByDescending(a => a.CreatedAt)
-            .Take(count)
-            .Select(a => new LoginAttemptDto
-            {
-                UserId = a.UserId,
-                IpAddress = a.IpAddress,
-                IsSuccessful = a.IsSuccessful,
-                AttemptedAt = a.CreatedAt,
-                UserAgent = a.UserAgent,
-                FailureReason = a.FailureReason
-            });
+            .Take(count);
 
-        return recentAttempts;
+        return _mapper.Map<IEnumerable<LoginAttemptDto>>(recentAttempts);
     }
 
     public async Task<LoginAttemptStats> GetStatsAsync(int hoursWindow = 24)

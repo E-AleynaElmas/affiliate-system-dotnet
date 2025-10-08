@@ -51,16 +51,22 @@ public class AuthService : IAuthService
         _loginAttemptService = loginAttemptService;
     }
 
+    private async Task<bool> ValidateCaptchaIfProvidedAsync(string? captchaToken, string? ipAddress = null)
+    {
+        if (string.IsNullOrEmpty(captchaToken))
+        {
+            return true;
+        }
+
+        return await _captchaService.ValidateCaptchaAsync(captchaToken, ipAddress);
+    }
+
     public async Task<BaseResponse<LoginResponse>> LoginAsync(LoginRequest request)
     {
-        if (!string.IsNullOrEmpty(request.CaptchaToken))
+        if (!await ValidateCaptchaIfProvidedAsync(request.CaptchaToken, request.IpAddress))
         {
-            var captchaValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaToken, request.IpAddress);
-            if (!captchaValid)
-            {
-                await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid CAPTCHA");
-                return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
-            }
+            await RecordLoginAttemptWithServiceAsync(request.Email, request.IpAddress ?? "", false, request.UserAgent, "Invalid CAPTCHA");
+            return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
         }
 
         if (!string.IsNullOrEmpty(request.IpAddress) && await _ipBlockingService.IsBlockedAsync(request.IpAddress))
@@ -124,13 +130,9 @@ public class AuthService : IAuthService
 
     public async Task<BaseResponse<LoginResponse>> RegisterAsync(RegisterRequest request)
     {
-        if (!string.IsNullOrEmpty(request.CaptchaToken))
+        if (!await ValidateCaptchaIfProvidedAsync(request.CaptchaToken))
         {
-            var captchaValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaToken);
-            if (!captchaValid)
-            {
-                return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
-            }
+            return BaseResponse<LoginResponse>.ErrorResponse("Invalid CAPTCHA. Please try again.");
         }
 
         if (await _userRepository.AnyAsync(u => u.Email == request.Email))

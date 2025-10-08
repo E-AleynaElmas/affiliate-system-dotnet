@@ -2,14 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AffiliateSystem.Application.DTOs.User;
 using AffiliateSystem.Application.Interfaces;
-using System.Security.Claims;
 
 namespace AffiliateSystem.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class UserController : ControllerBase
+public class UserController : BaseApiController
 {
     private readonly IUserService _userService;
 
@@ -23,7 +22,7 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userService.GetUserByIdAsync(userId);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(result);
     }
 
     [HttpPut("profile")]
@@ -31,7 +30,7 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userService.UpdateUserAsync(userId, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(result);
     }
 
     [HttpPost("change-password")]
@@ -39,7 +38,7 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userService.ChangePasswordAsync(userId, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(result);
     }
 
     [HttpGet("dashboard")]
@@ -47,7 +46,7 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userService.GetDashboardAsync(userId);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(result);
     }
 
     [HttpPost("referral-link")]
@@ -56,7 +55,7 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userService.CreateReferralLinkAsync(userId, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(result);
     }
 
     [HttpGet("all")]
@@ -64,7 +63,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetAllUsers()
     {
         var result = await _userService.GetAllUsersAsync();
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(result);
     }
 
     [HttpGet("{id}")]
@@ -72,18 +71,6 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetUserById(Guid id)
     {
         var result = await _userService.GetUserByIdAsync(id);
-        return result.Success ? Ok(result) : NotFound(result);
-    }
-
-    private Guid GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-        {
-            throw new UnauthorizedAccessException("User ID not found in token");
-        }
-
-        return userId;
+        return ToActionResultWithNotFound(result);
     }
 }

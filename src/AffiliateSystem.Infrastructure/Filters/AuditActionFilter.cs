@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Linq;
+using AffiliateSystem.Infrastructure.Middleware;
 
 namespace AffiliateSystem.Infrastructure.Filters;
 
@@ -24,7 +25,7 @@ public class AuditActionFilter : IAsyncActionFilter
     {
         var userId = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Anonymous";
         var userEmail = context.HttpContext.User.FindFirst(ClaimTypes.Email)?.Value ?? "Unknown";
-        var ipAddress = GetClientIpAddress(context.HttpContext);
+        var ipAddress = context.HttpContext.GetClientIpAddress();
         var actionName = context.ActionDescriptor.DisplayName;
         var timestamp = DateTime.UtcNow;
 
@@ -57,23 +58,6 @@ public class AuditActionFilter : IAsyncActionFilter
             _logger.LogInformation("AUDIT: Action {Action} by user {UserEmail} completed successfully",
                 actionName, userEmail);
         }
-    }
-
-    private string GetClientIpAddress(HttpContext context)
-    {
-        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            return forwardedFor.Split(',')[0].Trim();
-        }
-
-        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(realIp))
-        {
-            return realIp;
-        }
-
-        return context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
     }
 
     private object? GetSanitizedRequestData(ActionExecutingContext context)

@@ -36,6 +36,16 @@ public class UserService : IUserService
         _mapper = mapper;
     }
 
+    private async Task<User> GetUserOrThrowAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new KeyNotFoundException($"User with ID {userId} not found");
+        }
+        return user;
+    }
+
     public async Task<BaseResponse<UserDto>> GetUserByIdAsync(Guid userId)
     {
         var user = await _userRepository.GetByIdAsync(userId);
@@ -56,12 +66,7 @@ public class UserService : IUserService
 
     public async Task<BaseResponse<UserDto>> UpdateUserAsync(Guid userId, UpdateUserRequest request)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (user == null)
-        {
-            return BaseResponse<UserDto>.ErrorResponse("User not found");
-        }
+        var user = await GetUserOrThrowAsync(userId);
 
         user.FirstName = request.FirstName ?? user.FirstName;
         user.LastName = request.LastName ?? user.LastName;
@@ -76,12 +81,7 @@ public class UserService : IUserService
 
     public async Task<BaseResponse<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (user == null)
-        {
-            return BaseResponse<bool>.ErrorResponse("User not found");
-        }
+        var user = await GetUserOrThrowAsync(userId);
 
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
         {
@@ -100,12 +100,7 @@ public class UserService : IUserService
 
     public async Task<BaseResponse<DashboardDto>> GetDashboardAsync(Guid userId)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (user == null)
-        {
-            return BaseResponse<DashboardDto>.ErrorResponse("User not found");
-        }
+        var user = await GetUserOrThrowAsync(userId);
 
         var dashboard = new DashboardDto
         {
@@ -123,17 +118,7 @@ public class UserService : IUserService
             var referralLinks = await _referralLinkRepository.FindAsync(r => r.CreatedByUserId == userId);
             dashboard.ActiveReferralLinks = referralLinks.Count(r => r.IsActive && r.CanBeUsed());
 
-            dashboard.ReferralLinks = referralLinks.Select(r => new ReferralLinkDto
-            {
-                Id = r.Id,
-                Code = r.Code,
-                UsageCount = r.UsageCount,
-                MaxUsages = r.MaxUsages,
-                ExpiresAt = r.ExpiresAt,
-                IsActive = r.IsActive,
-                CreatedAt = r.CreatedAt,
-                FullUrl = r.GetFullUrl("https://yourdomain.com")
-            }).ToList();
+            dashboard.ReferralLinks = _mapper.Map<List<ReferralLinkDto>>(referralLinks);
         }
 
         var allLoginAttempts = await _loginAttemptRepository.FindAsync(a => a.UserId == userId);
@@ -141,14 +126,7 @@ public class UserService : IUserService
             .OrderByDescending(a => a.CreatedAt)
             .Take(10);
 
-        dashboard.RecentLoginAttempts = loginAttempts.Select(a => new LoginAttemptDto
-        {
-            IpAddress = a.IpAddress,
-            IsSuccessful = a.IsSuccessful,
-            UserAgent = a.UserAgent,
-            AttemptedAt = a.AttemptedAt,
-            FailureReason = a.FailureReason
-        }).ToList();
+        dashboard.RecentLoginAttempts = _mapper.Map<List<LoginAttemptDto>>(loginAttempts);
 
         return BaseResponse<DashboardDto>.SuccessResponse(dashboard);
     }
@@ -162,12 +140,7 @@ public class UserService : IUserService
 
     public async Task<BaseResponse<bool>> SetUserActiveStatusAsync(Guid userId, bool isActive)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (user == null)
-        {
-            return BaseResponse<bool>.ErrorResponse("User not found");
-        }
+        var user = await GetUserOrThrowAsync(userId);
 
         user.IsActive = isActive;
         _userRepository.Update(user);
@@ -179,12 +152,7 @@ public class UserService : IUserService
 
     public async Task<BaseResponse<bool>> DeleteUserAsync(Guid userId)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (user == null)
-        {
-            return BaseResponse<bool>.ErrorResponse("User not found");
-        }
+        var user = await GetUserOrThrowAsync(userId);
 
         _userRepository.Remove(user);
         await _unitOfWork.CompleteAsync();
@@ -194,12 +162,7 @@ public class UserService : IUserService
 
     public async Task<BaseResponse<ReferralLinkDto>> CreateReferralLinkAsync(Guid userId, CreateReferralLinkRequest request)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (user == null)
-        {
-            return BaseResponse<ReferralLinkDto>.ErrorResponse("User not found");
-        }
+        var user = await GetUserOrThrowAsync(userId);
 
         if (user.Role != UserRole.Manager && user.Role != UserRole.Admin)
         {
